@@ -27,8 +27,9 @@ fmt: ## Format all Go sources
 vet: ## Run go vet
 	go vet ./...
 
-lint: ## Check formatting without writing (matches CI)
-	@test -z "$$(gofmt -l .)" || (echo "gofmt needed:"; gofmt -l .; exit 1)
+lint: ## Check formatting without writing
+	@out="$$(gofmt -l . 2>&1)"; \
+	if [ -n "$$out" ]; then echo "gofmt issues (unformatted files or parse errors):"; echo "$$out"; exit 1; fi
 
 check: lint vet test ## Everything CI runs, locally
 
