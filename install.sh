@@ -51,21 +51,21 @@ trap 'rm -rf "$tmp"' EXIT INT TERM
 info "Downloading ${asset} (${VERSION})"
 curl -fsSL -o "$tmp/kd.tgz" "${base}/${asset}" || err "download failed: ${base}/${asset}"
 
-# Verify the sha256 against the release's checksums.txt when we can.
-checks=$(curl -fsSL "${base}/checksums.txt" 2>/dev/null || true)
-if [ -n "$checks" ]; then
-  if command -v sha256sum >/dev/null 2>&1; then
-    sum=$(sha256sum "$tmp/kd.tgz" | awk '{print $1}')
-  elif command -v shasum >/dev/null 2>&1; then
-    sum=$(shasum -a 256 "$tmp/kd.tgz" | awk '{print $1}')
-  else
-    sum=""
-  fi
-  if [ -n "$sum" ]; then
-    printf '%s\n' "$checks" | grep -q "$sum  $asset" || err "checksum mismatch for $asset"
-    info "Checksum verified"
-  fi
+# Verify the sha256 against the release's checksums.txt. Every release ships
+# one, so fail closed: if we can't fetch it or can't hash locally, abort rather
+# than install an unverified binary.
+info "Verifying checksum"
+checks=$(curl -fsSL "${base}/checksums.txt") || err "could not download checksums.txt to verify the archive"
+if command -v sha256sum >/dev/null 2>&1; then
+  sum=$(sha256sum "$tmp/kd.tgz" | awk '{print $1}')
+elif command -v shasum >/dev/null 2>&1; then
+  sum=$(shasum -a 256 "$tmp/kd.tgz" | awk '{print $1}')
+else
+  err "need 'sha256sum' or 'shasum' to verify the download"
 fi
+# checksums.txt lines are exactly "<sha256>  <filename>"; match the whole line.
+printf '%s\n' "$checks" | grep -Fqx "$sum  $asset" || err "checksum mismatch for $asset"
+info "Checksum verified"
 
 tar -xzf "$tmp/kd.tgz" -C "$tmp" kd || err "could not extract kd from archive"
 mkdir -p "$INSTALL_DIR"
@@ -73,7 +73,7 @@ mv "$tmp/kd" "$INSTALL_DIR/kd"
 chmod +x "$INSTALL_DIR/kd"
 
 info "Installed kd to $INSTALL_DIR/kd"
-"$INSTALL_DIR/kd" --version || true
+"$INSTALL_DIR/kd" --version || err "installed kd failed to run"
 
 # Nudge if the install dir isn't on PATH.
 case ":${PATH}:" in
