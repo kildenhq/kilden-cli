@@ -121,6 +121,11 @@ func backoff(attempt int) time.Duration {
 	if attempt <= 0 {
 		return 0
 	}
+	// Clamp the exponent before shifting: 1<<4 = 16s already exceeds the cap,
+	// and an unbounded attempt count would overflow the shift.
+	if attempt > 5 {
+		attempt = 5
+	}
 	d := time.Duration(1<<uint(attempt-1)) * time.Second
 	if d > 15*time.Second {
 		d = 15 * time.Second
