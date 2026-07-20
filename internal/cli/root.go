@@ -32,6 +32,7 @@ func Execute(version string) {
 		projectCmd(),
 		eventsCmd(),
 		propertiesCmd(),
+		tailCmd(),
 		keyCmd(),
 		identitySecretCmd(),
 	)

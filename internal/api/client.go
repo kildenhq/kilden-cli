@@ -172,6 +172,12 @@ func (c *Client) CreateKey(ctx context.Context, projectID, kind, label string) (
 	return &k, c.do(ctx, http.MethodPost, "/projects/"+projectID+"/api-keys", nil, body, &k)
 }
 
+// LivetailTicket mints a short-lived ticket for the live-tail websocket.
+func (c *Client) LivetailTicket(ctx context.Context, projectID string) (*LivetailTicket, error) {
+	var t LivetailTicket
+	return &t, c.do(ctx, http.MethodPost, "/projects/"+projectID+"/livetail-ticket", nil, nil, &t)
+}
+
 // IdentitySecrets lists a project's identity-verification secrets. The secret
 // value itself is never returned here — only kid, timestamps and revoked state.
 func (c *Client) IdentitySecrets(ctx context.Context, projectID string) ([]IdentitySecret, error) {
