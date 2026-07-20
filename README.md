@@ -19,10 +19,13 @@ Detects your OS and CPU, downloads the latest release, verifies its checksum,
 and installs `kd` into `~/.local/bin`. Override with env vars:
 
 ```bash
-# a specific version, or a different install dir
+# pin a version and/or pick a different (writable) install dir
 curl -fsSL https://raw.githubusercontent.com/kildenhq/kilden-cli/main/install.sh \
-  | KILDEN_VERSION=v0.1.0 KILDEN_INSTALL_DIR=/usr/local/bin bash
+  | KILDEN_VERSION=v0.1.0 KILDEN_INSTALL_DIR="$HOME/bin" bash
 ```
+
+For a system-wide install into a root-owned dir, run it under `sudo`:
+`curl -fsSL … | sudo KILDEN_INSTALL_DIR=/usr/local/bin bash`.
 
 If `~/.local/bin` isn't on your `PATH`, the installer tells you how to add it.
 
