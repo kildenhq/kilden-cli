@@ -14,15 +14,52 @@ builds:
       - CGO_ENABLED=0
     goos: [linux, darwin, windows]
     goarch: [amd64, arm64]
+    # We ship exactly five targets; Windows-on-ARM isn't one of them.
+    ignore:
+      - goos: windows
+        goarch: arm64
     ldflags:
       - -s -w -X main.version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
 
 archives:
   - id: default
-    name_template: "kd_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # Version-less names so `releases/latest/download/kd_<os>_<arch>.<ext>` is a
+    # stable URL — the one-line installers in the README depend on it.
+    # e.g. kd_darwin_arm64.tar.gz, kd_windows_amd64.zip
+    name_template: "kd_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
         formats: [zip]
+    files:
+      - README.md
+      - LICENSE
 
 checksum:
   name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      # Match scoped prefixes too: docs(readme):, chore(deps):, test(auth):
+      - '^(docs|test|chore)(\(.+\))?:'
+      - Merge pull request
+      - Merge branch
+
+release:
+  name_template: "kd {{ .Version }}"
+  footer: |
+    ## Install
+
+    Download the archive for your platform below, or see the
+    [README](https://github.com/kildenhq/kilden-cli#install) for one-line
+    installers and `go install`.
+
+    | Platform | Asset |
+    |---|---|
+    | macOS (Apple Silicon) | `kd_darwin_arm64.tar.gz` |
+    | macOS (Intel) | `kd_darwin_amd64.tar.gz` |
+    | Linux (x86-64) | `kd_linux_amd64.tar.gz` |
+    | Linux (ARM64) | `kd_linux_arm64.tar.gz` |
+    | Windows (x64) | `kd_windows_amd64.zip` |
