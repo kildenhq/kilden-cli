@@ -115,6 +115,9 @@ kd identity-secret disable 3   # revoke a secret by id (from `identity-secret ls
 
 kd events                      # recent events, newest first
 kd events --event signup       # filter by event name
+kd tail                        # stream events live as they arrive (Ctrl+C to stop)
+kd tail --event signup         # only stream a given event
+kd tail --json | jq            # raw JSON per event, one per line
 kd properties                  # event names + property keys observed
 ```
 

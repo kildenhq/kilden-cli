@@ -1,5 +1,7 @@
 package api
 
+import "encoding/json"
+
 // Write-key kinds (non-negotiable #12): public keys identify the project in
 // the browser; secret keys are backend-only.
 const (
@@ -65,6 +67,26 @@ type IdentitySecret struct {
 	Secret    string `json:"secret"`
 	CreatedAt string `json:"created_at"`
 	RevokedAt string `json:"revoked_at"`
+}
+
+// LivetailTicket gates the live-tail websocket handshake. The ticket is a
+// short-lived (≤60s) HS256 JWT; url is the websocket endpoint to dial.
+type LivetailTicket struct {
+	Ticket    string `json:"ticket"`
+	URL       string `json:"url"`
+	ExpiresAt string `json:"expires_at"`
+}
+
+// LiveEvent is one frame from the live-tail websocket (one event per frame).
+type LiveEvent struct {
+	UUID       string          `json:"uuid"`
+	Event      string          `json:"event"`
+	DistinctID string          `json:"distinct_id"`
+	PersonID   string          `json:"person_id"`
+	Timestamp  string          `json:"timestamp"`
+	Verified   bool            `json:"verified"`
+	Source     string          `json:"source"`
+	Properties json.RawMessage `json:"properties"`
 }
 
 // Event is one row from the events explorer.
