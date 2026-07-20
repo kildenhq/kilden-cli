@@ -106,7 +106,12 @@ kd project use <project-id>    # switch the active project
 kd project create --name "Web" --timezone America/Santiago
 
 kd key                         # list the active project's write keys
-kd key create --kind secret --label CI   # full value shown once
+kd key create --kind public --label web  # public write key (wk_)
+kd key create --kind secret --label CI   # server key (sk_), full value shown once
+
+kd identity-secret             # list the project's identity-verification secrets
+kd identity-secret create --kid v1   # HS256 secret (is_), full value shown once
+kd identity-secret disable 3   # revoke a secret by id (from `identity-secret ls`)
 
 kd events                      # recent events, newest first
 kd events --event signup       # filter by event name

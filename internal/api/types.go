@@ -56,6 +56,17 @@ type APIKey struct {
 	CreatedAt string `json:"created_at"`
 }
 
+// IdentitySecret is a project's HS256 identity-verification secret. Secret is
+// only present on create (shown once); listings omit it. RevokedAt is empty
+// while the secret is active.
+type IdentitySecret struct {
+	ID        int    `json:"id"`
+	Kid       string `json:"kid"`
+	Secret    string `json:"secret"`
+	CreatedAt string `json:"created_at"`
+	RevokedAt string `json:"revoked_at"`
+}
+
 // Event is one row from the events explorer.
 type Event struct {
 	UUID             string `json:"uuid"`
