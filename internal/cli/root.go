@@ -33,6 +33,7 @@ func Execute(version string) {
 		eventsCmd(),
 		propertiesCmd(),
 		keyCmd(),
+		identitySecretCmd(),
 	)
 
 	if err := root.ExecuteContext(ctx); err != nil {

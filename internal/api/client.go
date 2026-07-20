@@ -172,6 +172,29 @@ func (c *Client) CreateKey(ctx context.Context, projectID, kind, label string) (
 	return &k, c.do(ctx, http.MethodPost, "/projects/"+projectID+"/api-keys", nil, body, &k)
 }
 
+// IdentitySecrets lists a project's identity-verification secrets. The secret
+// value itself is never returned here — only kid, timestamps and revoked state.
+func (c *Client) IdentitySecrets(ctx context.Context, projectID string) ([]IdentitySecret, error) {
+	var env listEnvelope[IdentitySecret]
+	return env.Data, c.do(ctx, http.MethodGet, "/projects/"+projectID+"/identity-secrets", nil, nil, &env)
+}
+
+// CreateIdentitySecret mints a secret under kid. The full value is only ever
+// returned here.
+func (c *Client) CreateIdentitySecret(ctx context.Context, projectID, kid string) (*IdentitySecret, error) {
+	var s IdentitySecret
+	body := map[string]any{"kid": kid}
+	return &s, c.do(ctx, http.MethodPost, "/projects/"+projectID+"/identity-secrets", nil, body, &s)
+}
+
+// DisableIdentitySecret revokes a secret by id; the enricher stops accepting
+// its kid within one refresh.
+func (c *Client) DisableIdentitySecret(ctx context.Context, projectID string, id int) (*IdentitySecret, error) {
+	var s IdentitySecret
+	path := "/projects/" + projectID + "/identity-secrets/" + strconv.Itoa(id) + "/disable"
+	return &s, c.do(ctx, http.MethodPatch, path, nil, nil, &s)
+}
+
 // Events returns recent events for a project, newest first.
 func (c *Client) Events(ctx context.Context, projectID string, filters url.Values) (*EventsPage, error) {
 	var page EventsPage
