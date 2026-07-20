@@ -24,8 +24,13 @@ curl -fsSL https://raw.githubusercontent.com/kildenhq/kilden-cli/main/install.sh
   | KILDEN_VERSION=v0.1.0 KILDEN_INSTALL_DIR="$HOME/bin" bash
 ```
 
-For a system-wide install into a root-owned dir, run it under `sudo`:
-`curl -fsSL … | sudo KILDEN_INSTALL_DIR=/usr/local/bin bash`.
+For a system-wide install, install normally and move the binary with `sudo`
+(don't pipe a remote script straight into `sudo` — that runs unreviewed code
+as root):
+
+```bash
+sudo mv ~/.local/bin/kd /usr/local/bin/kd
+```
 
 If `~/.local/bin` isn't on your `PATH`, the installer tells you how to add it.
 
