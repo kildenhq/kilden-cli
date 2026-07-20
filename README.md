@@ -19,9 +19,17 @@ Detects your OS and CPU, downloads the latest release, verifies its checksum,
 and installs `kd` into `~/.local/bin`. Override with env vars:
 
 ```bash
-# a specific version, or a different install dir
+# pin a version and/or pick a different (writable) install dir
 curl -fsSL https://raw.githubusercontent.com/kildenhq/kilden-cli/main/install.sh \
-  | KILDEN_VERSION=v0.1.0 KILDEN_INSTALL_DIR=/usr/local/bin bash
+  | KILDEN_VERSION=v0.1.0 KILDEN_INSTALL_DIR="$HOME/bin" bash
+```
+
+For a system-wide install, install normally and move the binary with `sudo`
+(don't pipe a remote script straight into `sudo` — that runs unreviewed code
+as root):
+
+```bash
+sudo mv ~/.local/bin/kd /usr/local/bin/kd
 ```
 
 If `~/.local/bin` isn't on your `PATH`, the installer tells you how to add it.
@@ -54,22 +62,6 @@ Pre-built binaries for every release are on the
 | Linux (x86-64) | `kd_linux_amd64.tar.gz` |
 | Linux (ARM64) | `kd_linux_arm64.tar.gz` |
 | Windows (x64) | `kd_windows_amd64.zip` |
-
-### Windows (x64)
-
-Download `kd_windows_amd64.zip` from the
-[latest release](https://github.com/kildenhq/kilden-cli/releases/latest),
-unzip it, and put `kd.exe` somewhere on your `PATH` (e.g. a folder you add under
-*System → Environment Variables*). In PowerShell:
-
-```powershell
-$dir = "$env:LOCALAPPDATA\Programs\kilden"
-New-Item -ItemType Directory -Force -Path $dir | Out-Null
-Invoke-WebRequest -Uri "https://github.com/kildenhq/kilden-cli/releases/latest/download/kd_windows_amd64.zip" -OutFile "$env:TEMP\kd.zip"
-Expand-Archive -Force "$env:TEMP\kd.zip" $dir
-# add $dir to your PATH, then:
-kd --version
-```
 
 ### With Go
 
