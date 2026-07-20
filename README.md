@@ -9,9 +9,43 @@ no passwords, no secrets stored beyond the tokens the browser hands back.
 
 ## Install
 
+### macOS / Linux — one line
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/kildenhq/kilden-cli/main/install.sh | bash
+```
+
+Detects your OS and CPU, downloads the latest release, verifies its checksum,
+and installs `kd` into `~/.local/bin`. Override with env vars:
+
+```bash
+# a specific version, or a different install dir
+curl -fsSL https://raw.githubusercontent.com/kildenhq/kilden-cli/main/install.sh \
+  | KILDEN_VERSION=v0.1.0 KILDEN_INSTALL_DIR=/usr/local/bin bash
+```
+
+If `~/.local/bin` isn't on your `PATH`, the installer tells you how to add it.
+
+### Windows (x64)
+
+Download `kd_windows_amd64.zip` from the
+[latest release](https://github.com/kildenhq/kilden-cli/releases/latest),
+unzip it, and put `kd.exe` somewhere on your `PATH` (e.g. a folder you add under
+*System → Environment Variables*). In PowerShell:
+
+```powershell
+$dir = "$env:LOCALAPPDATA\Programs\kilden"
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+Invoke-WebRequest -Uri "https://github.com/kildenhq/kilden-cli/releases/latest/download/kd_windows_amd64.zip" -OutFile "$env:TEMP\kd.zip"
+Expand-Archive -Force "$env:TEMP\kd.zip" $dir
+# add $dir to your PATH, then:
+kd --version
+```
+
+### Manual download
+
 Pre-built binaries for every release are on the
-[releases page](https://github.com/kildenhq/kilden-cli/releases/latest).
-Pick your platform:
+[releases page](https://github.com/kildenhq/kilden-cli/releases/latest):
 
 | Platform | Asset |
 |---|---|
@@ -20,24 +54,6 @@ Pick your platform:
 | Linux (x86-64) | `kd_linux_amd64.tar.gz` |
 | Linux (ARM64) | `kd_linux_arm64.tar.gz` |
 | Windows (x64) | `kd_windows_amd64.zip` |
-
-### macOS / Linux — one line
-
-Auto-detects your OS and CPU, downloads the latest release, and installs `kd`
-into `~/.local/bin` (make sure that's on your `PATH`):
-
-```bash
-os=$(uname -s | tr '[:upper:]' '[:lower:]')
-arch=$(uname -m); [ "$arch" = "x86_64" ] && arch=amd64; [ "$arch" = "aarch64" ] && arch=arm64
-mkdir -p ~/.local/bin
-curl -fsSL "https://github.com/kildenhq/kilden-cli/releases/latest/download/kd_${os}_${arch}.tar.gz" \
-  | tar -xz -C ~/.local/bin kd
-kd --version
-```
-
-On macOS, `uname -m` reports `arm64` (Apple Silicon) or `x86_64` (Intel) — the
-snippet maps both. To install system-wide instead, extract into `/usr/local/bin`
-(needs `sudo`).
 
 ### Windows (x64)
 
