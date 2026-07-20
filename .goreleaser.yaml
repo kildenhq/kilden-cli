@@ -42,9 +42,8 @@ changelog:
   sort: asc
   filters:
     exclude:
-      - "^docs:"
-      - "^test:"
-      - "^chore:"
+      # Match scoped prefixes too: docs(readme):, chore(deps):, test(auth):
+      - '^(docs|test|chore)(\(.+\))?:'
       - Merge pull request
       - Merge branch
 
