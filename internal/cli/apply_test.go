@@ -39,3 +39,17 @@ func TestParseApplyDocJSON(t *testing.T) {
 		t.Errorf("doc = %+v", doc)
 	}
 }
+
+func TestParseApplyDocAcceptsDocWithDuplicateSlugs(t *testing.T) {
+	// Parsing does not dedupe; the apply preflight rejects duplicates. Here we
+	// only assert the parse keeps both entries so the preflight has something
+	// to catch.
+	raw := []byte("insights:\n  - slug: a\n    type: trend\n    name: One\n    config: {events: [x]}\n  - slug: a\n    type: trend\n    name: Two\n    config: {events: [y]}\n")
+	doc, err := parseApplyDoc(raw)
+	if err != nil {
+		t.Fatalf("parseApplyDoc: %v", err)
+	}
+	if len(doc.Insights) != 2 {
+		t.Fatalf("insights = %d, want 2", len(doc.Insights))
+	}
+}

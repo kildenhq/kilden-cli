@@ -60,10 +60,15 @@ func applySpec(ctx context.Context, file, projectFlag string) error {
 	if len(doc.Insights) == 0 {
 		return fmt.Errorf("the spec has no insights to apply")
 	}
+	seen := make(map[string]int, len(doc.Insights))
 	for i, in := range doc.Insights {
 		if in.Slug == "" {
 			return fmt.Errorf("insights[%d]: every insight needs a slug (its stable identity)", i)
 		}
+		if first, dup := seen[in.Slug]; dup {
+			return fmt.Errorf("duplicate slug %q in insights[%d] and insights[%d] — each slug must be unique", in.Slug, first, i)
+		}
+		seen[in.Slug] = i
 	}
 
 	client, _, err := mustClient()

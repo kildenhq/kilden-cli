@@ -217,7 +217,11 @@ func (c *Client) Catalog(ctx context.Context, projectID string) (*Catalog, error
 // created in the panel carry no slug and are not returned here.
 func (c *Client) Insights(ctx context.Context, projectID string) ([]Insight, error) {
 	var env listEnvelope[Insight]
-	return env.Data, c.do(ctx, http.MethodGet, "/projects/"+projectID+"/insights", nil, nil, &env)
+	// Read the body before returning env.Data: Go only orders function calls
+	// left-to-right, not plain field reads, so `return env.Data, c.do(...)`
+	// could evaluate env.Data before c.do fills it.
+	err := c.do(ctx, http.MethodGet, "/projects/"+projectID+"/insights", nil, nil, &env)
+	return env.Data, err
 }
 
 // Insight returns one saved insight by slug.
