@@ -212,3 +212,29 @@ func (c *Client) Catalog(ctx context.Context, projectID string) (*Catalog, error
 	var cat Catalog
 	return &cat, c.do(ctx, http.MethodGet, "/projects/"+projectID+"/properties", nil, nil, &cat)
 }
+
+// Insights lists a project's config-as-code (slugged) insights. Insights
+// created in the panel carry no slug and are not returned here.
+func (c *Client) Insights(ctx context.Context, projectID string) ([]Insight, error) {
+	var env listEnvelope[Insight]
+	return env.Data, c.do(ctx, http.MethodGet, "/projects/"+projectID+"/insights", nil, nil, &env)
+}
+
+// Insight returns one saved insight by slug.
+func (c *Client) Insight(ctx context.Context, projectID, slug string) (*Insight, error) {
+	var in Insight
+	return &in, c.do(ctx, http.MethodGet, "/projects/"+projectID+"/insights/"+url.PathEscape(slug), nil, nil, &in)
+}
+
+// ApplyInsight upserts an insight by slug (idempotent create-or-update) and
+// returns the stored form.
+func (c *Client) ApplyInsight(ctx context.Context, projectID, slug string, spec Insight) (*Insight, error) {
+	var in Insight
+	body := map[string]any{"type": spec.Type, "name": spec.Name, "config": spec.Config}
+	return &in, c.do(ctx, http.MethodPut, "/projects/"+projectID+"/insights/"+url.PathEscape(slug), nil, body, &in)
+}
+
+// DeleteInsight removes a saved insight by slug.
+func (c *Client) DeleteInsight(ctx context.Context, projectID, slug string) error {
+	return c.do(ctx, http.MethodDelete, "/projects/"+projectID+"/insights/"+url.PathEscape(slug), nil, nil, nil)
+}

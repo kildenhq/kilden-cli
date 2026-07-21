@@ -12,7 +12,7 @@ import (
 // The CLI asks for the full scope set up front, so a single sign-in can read
 // and manage account/data. The panel still enforces team/project authorization
 // per request regardless of the token's scopes.
-const loginScopes = "account:read account:write data:read data:write"
+const loginScopes = "account:read account:write data:read data:write config:read config:write"
 
 func loginCmd() *cobra.Command {
 	var host string

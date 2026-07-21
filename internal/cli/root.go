@@ -35,6 +35,8 @@ func Execute(version string) {
 		tailCmd(),
 		keyCmd(),
 		identitySecretCmd(),
+		insightCmd(),
+		applyCmd(),
 	)
 
 	if err := root.ExecuteContext(ctx); err != nil {
