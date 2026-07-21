@@ -124,3 +124,15 @@ type Catalog struct {
 type listEnvelope[T any] struct {
 	Data []T `json:"data"`
 }
+
+// Insight is a saved insight managed as config-as-code, addressed by a stable
+// slug so `kd apply` is idempotent. Config is the raw per-type parameter map
+// (schema-less on the wire; the panel validates its shape). UpdatedAt is only
+// populated on reads and is dropped from exported specs (yaml:"-").
+type Insight struct {
+	Slug      string         `json:"slug" yaml:"slug"`
+	Type      string         `json:"type" yaml:"type"`
+	Name      string         `json:"name" yaml:"name"`
+	Config    map[string]any `json:"config" yaml:"config"`
+	UpdatedAt string         `json:"updated_at,omitempty" yaml:"-"`
+}
