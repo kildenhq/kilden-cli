@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/kildenhq/kilden-cli/internal/api"
 	"github.com/spf13/cobra"
@@ -154,18 +155,7 @@ func resourceNames() string {
 	for i, r := range resources {
 		names[i] = r.name + "s"
 	}
-	return joinComma(names)
-}
-
-func joinComma(parts []string) string {
-	out := ""
-	for i, p := range parts {
-		if i > 0 {
-			out += ", "
-		}
-		out += p
-	}
-	return out
+	return strings.Join(names, ", ")
 }
 
 // configResourceCmd builds the ls/get/rm/export quartet every config resource
@@ -191,6 +181,14 @@ func (r configResourceCmd) command() *cobra.Command {
 		Use:   "ls",
 		Short: "List the active project's managed " + r.aliasPlural,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			// Checked before anything reaches the network: a typo in --output
+			// should not cost a round trip to find out.
+			switch lsOutput {
+			case "table", "yaml", "json", "":
+			default:
+				return fmt.Errorf("--output must be table, yaml or json")
+			}
+
 			client, projectID, err := insightClient(cmd.Context(), lsProject)
 			if err != nil {
 				return err
@@ -486,11 +484,7 @@ func applySpec(ctx context.Context, file, projectFlag string) error {
 		return err
 	}
 
-	client, _, err := mustClient()
-	if err != nil {
-		return err
-	}
-	projectID, err := currentProjectID(ctx, client, projectFlag)
+	client, projectID, err := insightClient(ctx, projectFlag)
 	if err != nil {
 		return err
 	}

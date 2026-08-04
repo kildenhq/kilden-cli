@@ -1,6 +1,9 @@
 package cli
 
-import "testing"
+import (
+	"io"
+	"testing"
+)
 
 func TestParseApplyDocYAML(t *testing.T) {
 	raw := []byte(`
@@ -167,10 +170,31 @@ func TestApplyOrderPutsDependenciesFirst(t *testing.T) {
 	for i, r := range resources {
 		position[r.name] = i
 	}
-	if position["cohort"] > position["campaign"] {
+	// Look the names up explicitly: a missing one would otherwise read as 0 and
+	// let a renamed resource slip past every ordering assertion below.
+	at := func(name string) int {
+		i, ok := position[name]
+		if !ok {
+			t.Fatalf("no resource named %q — the ordering assertions below are meaningless", name)
+		}
+		return i
+	}
+	if at("cohort") > at("campaign") {
 		t.Error("cohorts must be applied before campaigns")
 	}
-	if position["flag"] > position["experiment"] {
+	if at("flag") > at("experiment") {
 		t.Error("flags must be applied before experiments")
+	}
+}
+
+// `ls` advertises table/yaml/json; anything else used to render a table with no
+// warning, while `get` and `export` rejected the same value.
+func TestListRejectsAnUnknownOutputFormat(t *testing.T) {
+	cmd := flagCmd()
+	cmd.SetArgs([]string{"ls", "-o", "jsonl"})
+	cmd.SetOut(io.Discard)
+	cmd.SetErr(io.Discard)
+	if err := cmd.Execute(); err == nil {
+		t.Fatal("want an error for an unknown --output value")
 	}
 }

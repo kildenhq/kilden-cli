@@ -273,7 +273,7 @@ func (c *Client) Cohort(ctx context.Context, projectID, slug string) (*Cohort, e
 
 func (c *Client) ApplyCohort(ctx context.Context, projectID string, spec Cohort) (*Cohort, error) {
 	var out Cohort
-	body := map[string]any{"name": spec.Name, "definition": spec.Definition}
+	body := map[string]any{"name": spec.Name, "definition": orEmptyMap(spec.Definition)}
 	return &out, c.do(ctx, http.MethodPut, c.configPath(projectID, "cohorts", spec.Slug), nil, body, &out)
 }
 
@@ -332,7 +332,7 @@ func (c *Client) Unit(ctx context.Context, projectID, slug string) (*Unit, error
 func (c *Client) ApplyUnit(ctx context.Context, projectID string, spec Unit) (*Unit, error) {
 	var out Unit
 	body := map[string]any{
-		"type": spec.Type, "name": spec.Name, "content": spec.Content,
+		"type": spec.Type, "name": spec.Name, "content": orEmptyMap(spec.Content),
 		"targeting":          orEmptyMap(spec.Targeting),
 		"rollout_percentage": spec.RolloutPercentage,
 		"display":            orEmptyMap(spec.Display),
@@ -372,7 +372,7 @@ func (c *Client) ApplyCampaign(ctx context.Context, projectID string, spec Campa
 	}
 	body := map[string]any{
 		"name": spec.Name, "reentry": reentry,
-		"nodes": spec.Nodes, "edges": spec.Edges,
+		"nodes": orEmptySlice(spec.Nodes), "edges": orEmptySlice(spec.Edges),
 	}
 	for key, value := range map[string]string{
 		"status": spec.Status, "cohort": spec.Cohort, "exit_event": spec.ExitEvent,
@@ -417,7 +417,7 @@ func (c *Client) ApplyExperiment(ctx context.Context, projectID string, spec Exp
 		"flag": spec.Flag, "name": spec.Name,
 		"control_variant":         spec.ControlVariant,
 		"attribution_window_days": spec.AttributionWindowDays,
-		"primary_metric":          spec.PrimaryMetric,
+		"primary_metric":          orEmptyMap(spec.PrimaryMetric),
 	}
 	if spec.Status != "" {
 		body["status"] = spec.Status
@@ -439,6 +439,16 @@ func (c *Client) ApplyExperiment(ctx context.Context, projectID string, spec Exp
 
 func (c *Client) DeleteExperiment(ctx context.Context, projectID, key string) error {
 	return c.do(ctx, http.MethodDelete, c.configPath(projectID, "experiments", key), nil, nil, nil)
+}
+
+// orEmptySlice is orEmptyMap for the required collections: a nil slice marshals
+// to JSON null, and the caller deserves "every campaign needs a flow" rather
+// than a server-side type error.
+func orEmptySlice[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
 }
 
 // orEmptyMap keeps `present` fields present: the panel validates `filters` and
