@@ -119,7 +119,75 @@ kd tail                        # stream events live as they arrive (Ctrl+C to st
 kd tail --event signup         # only stream a given event
 kd tail --json | jq            # raw JSON per event, one per line
 kd properties                  # event names + property keys observed
+
+kd apply -f kilden.yaml         # create or update config from a spec (idempotent)
+kd cohort                       # cohorts, flags, insights, in-app units,
+kd flag                         # campaigns and experiments each get the same
+kd insight                      # quartet: ls / get / rm / export
+kd unit
+kd campaign
+kd experiment
+
+kd cohort materialize power-users   # recompute membership now, not on the sweep
 ```
+
+## Config as code
+
+`kd apply` reads one YAML (or JSON) document with a key per collection, and is
+**idempotent**: re-applying an unchanged spec leaves everything exactly as it
+was — no duplicates, and no side effects like re-announcing a cohort's whole
+membership.
+
+```yaml
+cohorts:
+  - slug: power-users
+    name: Power users
+    definition:
+      conditions:
+        - type: behavior
+          event: checkout_completed
+          count_gte: 3
+          days: 30
+flags:
+  - key: checkout-v2
+    name: New checkout
+    active: true
+    rollout_percentage: 50
+campaigns:
+  - slug: welcome-series
+    name: Welcome series
+    status: active
+    reentry: never
+    cohort: power-users          # cohorts are named by slug, never by uuid
+    nodes:
+      - key: signup-trigger      # the key is the node's stable identity
+        type: trigger
+        config: {mode: event, event: signup}
+      - key: welcome-email
+        type: email
+        config: {subject: Welcome, body_template: "<p>Hi</p>"}
+    edges:
+      - from: signup-trigger
+        to: welcome-email
+```
+
+Collections are applied in **dependency order** (cohorts → flags → insights →
+units → campaigns → experiments), so the order you write them in does not
+matter.
+
+Two identities, depending on the resource: `slug` for cohorts, insights, units
+and campaigns — anything you created in the panel keeps a null slug and is never
+listed or overwritten — and `key` for flags and experiments, where the panel and
+your file address the same rows on purpose.
+
+**A campaign node's `key` matters more than it looks.** The engine's node id is
+derived from it, and people mid-flow are parked on that id: keeping a key keeps
+them where they are, and renaming one is a genuinely different step, so whoever
+was waiting there leaves the campaign.
+
+Some things are deliberately not in the document, because a file describes state
+rather than acts: broadcasting a campaign, sending a test, and concluding or
+promoting an experiment all stay in the panel.
 
 Most data commands act on your **active project**; override per command with
 `--project <id>`.

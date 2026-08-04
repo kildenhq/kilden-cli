@@ -136,3 +136,105 @@ type Insight struct {
 	Config    map[string]any `json:"config" yaml:"config"`
 	UpdatedAt string         `json:"updated_at,omitempty" yaml:"-"`
 }
+
+// --- config-as-code resources (docs/55–59) ---
+//
+// Every one is addressed by a stable identity the caller chooses — `slug`
+// where the table gained one, `key` where it already had it — so `kd apply` is
+// idempotent. UpdatedAt is only populated on reads and is dropped from
+// exported specs (yaml:"-").
+
+// Cohort is a materialized audience (docs/55). MembersCount and
+// LastMaterializedAt are read-only.
+type Cohort struct {
+	Slug               string         `json:"slug" yaml:"slug"`
+	Name               string         `json:"name" yaml:"name"`
+	Definition         map[string]any `json:"definition" yaml:"definition"`
+	MembersCount       int            `json:"members_count,omitempty" yaml:"-"`
+	LastMaterializedAt string         `json:"last_materialized_at,omitempty" yaml:"-"`
+	UpdatedAt          string         `json:"updated_at,omitempty" yaml:"-"`
+}
+
+// Flag is a feature flag (docs/56), addressed by the key the table already
+// had. Variants nil means a boolean flag.
+type Flag struct {
+	Key               string           `json:"key" yaml:"key"`
+	Name              string           `json:"name" yaml:"name"`
+	Active            bool             `json:"active" yaml:"active"`
+	RolloutPercentage int              `json:"rollout_percentage" yaml:"rollout_percentage"`
+	Filters           map[string]any   `json:"filters" yaml:"filters,omitempty"`
+	Variants          []map[string]any `json:"variants,omitempty" yaml:"variants,omitempty"`
+	UpdatedAt         string           `json:"updated_at,omitempty" yaml:"-"`
+}
+
+// Unit is an in-app unit or tour (docs/58). Type is honoured on create only:
+// content is typed BY type, so changing it in place is refused with 409.
+type Unit struct {
+	Slug              string         `json:"slug" yaml:"slug"`
+	Type              string         `json:"type" yaml:"type"`
+	Name              string         `json:"name" yaml:"name"`
+	Status            string         `json:"status" yaml:"status"`
+	Content           map[string]any `json:"content" yaml:"content"`
+	Targeting         map[string]any `json:"targeting" yaml:"targeting,omitempty"`
+	RolloutPercentage int            `json:"rollout_percentage" yaml:"rollout_percentage"`
+	Display           map[string]any `json:"display" yaml:"display,omitempty"`
+	StartsAt          string         `json:"starts_at,omitempty" yaml:"starts_at,omitempty"`
+	EndsAt            string         `json:"ends_at,omitempty" yaml:"ends_at,omitempty"`
+	UpdatedAt         string         `json:"updated_at,omitempty" yaml:"-"`
+}
+
+// CampaignNode is one step of a campaign's flow. Key is its stable identity
+// WITHIN the campaign: the engine's node id is derived from it (uuid v5), so
+// renaming a key really is a different node — and re-applying an unchanged
+// document leaves every in-flight journey exactly where it was (docs/57 §2).
+type CampaignNode struct {
+	Key    string         `json:"key" yaml:"key"`
+	Type   string         `json:"type" yaml:"type"`
+	Config map[string]any `json:"config" yaml:"config"`
+}
+
+// CampaignEdge wires two nodes by key. Outcome defaults to "next"; branch arms
+// are yes/no and split arms carry their variant ("split:<key>").
+type CampaignEdge struct {
+	From    string `json:"from" yaml:"from"`
+	To      string `json:"to" yaml:"to"`
+	Outcome string `json:"outcome,omitempty" yaml:"outcome,omitempty"`
+}
+
+// Campaign is a messaging flow (docs/57). Cohort names a cohort by ITS slug,
+// never a uuid, so one document applies to more than one project.
+type Campaign struct {
+	Slug                    string         `json:"slug" yaml:"slug"`
+	Name                    string         `json:"name" yaml:"name"`
+	Status                  string         `json:"status" yaml:"status"`
+	Cohort                  string         `json:"cohort,omitempty" yaml:"cohort,omitempty"`
+	ExitEvent               string         `json:"exit_event,omitempty" yaml:"exit_event,omitempty"`
+	Reentry                 string         `json:"reentry" yaml:"reentry"`
+	ReentryDays             *int           `json:"reentry_days,omitempty" yaml:"reentry_days,omitempty"`
+	FrequencyCap            *int           `json:"frequency_cap,omitempty" yaml:"frequency_cap,omitempty"`
+	FrequencyCapWindowHours *int           `json:"frequency_cap_window_hours,omitempty" yaml:"frequency_cap_window_hours,omitempty"`
+	FromName                string         `json:"from_name,omitempty" yaml:"from_name,omitempty"`
+	ReplyToEmail            string         `json:"reply_to_email,omitempty" yaml:"reply_to_email,omitempty"`
+	QuietHours              map[string]any `json:"quiet_hours,omitempty" yaml:"quiet_hours,omitempty"`
+	Nodes                   []CampaignNode `json:"nodes" yaml:"nodes"`
+	Edges                   []CampaignEdge `json:"edges" yaml:"edges"`
+	UpdatedAt               string         `json:"updated_at,omitempty" yaml:"-"`
+}
+
+// Experiment is a 1:1 lens over a multivariate flag (docs/59), which it names
+// by the flag's key. A document can take it as far as `stopped`: concluding it
+// and promoting a winner stay in the panel.
+type Experiment struct {
+	Key                     string           `json:"key" yaml:"key"`
+	Flag                    string           `json:"flag" yaml:"flag"`
+	Name                    string           `json:"name" yaml:"name"`
+	Status                  string           `json:"status" yaml:"status"`
+	Hypothesis              string           `json:"hypothesis,omitempty" yaml:"hypothesis,omitempty"`
+	ControlVariant          string           `json:"control_variant" yaml:"control_variant"`
+	AttributionWindowDays   int              `json:"attribution_window_days" yaml:"attribution_window_days"`
+	MinimumDetectableEffect *float64         `json:"minimum_detectable_effect,omitempty" yaml:"minimum_detectable_effect,omitempty"`
+	PrimaryMetric           map[string]any   `json:"primary_metric" yaml:"primary_metric"`
+	SecondaryMetrics        []map[string]any `json:"secondary_metrics,omitempty" yaml:"secondary_metrics,omitempty"`
+	GuardrailMetrics        []map[string]any `json:"guardrail_metrics,omitempty" yaml:"guardrail_metrics,omitempty"`
+	UpdatedAt               string           `json:"updated_at,omitempty" yaml:"-"`
+}
