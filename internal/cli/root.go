@@ -18,7 +18,7 @@ func Execute(version string) {
 	root := &cobra.Command{
 		Use:           "kd",
 		Short:         "Kilden — sign in and manage your account from the terminal",
-		Long:          "kd is the Kilden command-line. Sign in with `kd login`, then inspect\nyour teams and projects, query events and manage write keys.",
+		Long:          "kd is the Kilden command-line. Sign in with `kd login`, then inspect\nyour teams and projects, query events, manage write keys, and keep cohorts,\nflags, insights, in-app units, campaigns and experiments as code with\n`kd apply`.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Version:       version,
@@ -36,6 +36,11 @@ func Execute(version string) {
 		keyCmd(),
 		identitySecretCmd(),
 		insightCmd(),
+		cohortCmd(),
+		flagCmd(),
+		unitCmd(),
+		campaignCmd(),
+		experimentCmd(),
 		applyCmd(),
 	)
 

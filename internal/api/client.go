@@ -242,3 +242,221 @@ func (c *Client) ApplyInsight(ctx context.Context, projectID, slug string, spec 
 func (c *Client) DeleteInsight(ctx context.Context, projectID, slug string) error {
 	return c.do(ctx, http.MethodDelete, "/projects/"+projectID+"/insights/"+url.PathEscape(slug), nil, nil, nil)
 }
+
+// --- config-as-code (docs/55–59) ---
+//
+// One shape per resource: list, get one, upsert by its stable identity, delete.
+// Every method reads the body into `out` BEFORE returning it: Go only orders
+// function calls left-to-right, not plain field reads, so `return env.Data,
+// c.do(...)` could evaluate env.Data before c.do fills it.
+
+func (c *Client) configPath(projectID, resource, id string) string {
+	path := "/projects/" + projectID + "/" + resource
+	if id != "" {
+		path += "/" + url.PathEscape(id)
+	}
+	return path
+}
+
+// Cohorts lists a project's config-as-code cohorts. Cohorts created in the
+// panel carry no slug and are not returned here.
+func (c *Client) Cohorts(ctx context.Context, projectID string) ([]Cohort, error) {
+	var env listEnvelope[Cohort]
+	err := c.do(ctx, http.MethodGet, c.configPath(projectID, "cohorts", ""), nil, nil, &env)
+	return env.Data, err
+}
+
+func (c *Client) Cohort(ctx context.Context, projectID, slug string) (*Cohort, error) {
+	var out Cohort
+	return &out, c.do(ctx, http.MethodGet, c.configPath(projectID, "cohorts", slug), nil, nil, &out)
+}
+
+func (c *Client) ApplyCohort(ctx context.Context, projectID string, spec Cohort) (*Cohort, error) {
+	var out Cohort
+	body := map[string]any{"name": spec.Name, "definition": orEmptyMap(spec.Definition)}
+	return &out, c.do(ctx, http.MethodPut, c.configPath(projectID, "cohorts", spec.Slug), nil, body, &out)
+}
+
+func (c *Client) DeleteCohort(ctx context.Context, projectID, slug string) error {
+	return c.do(ctx, http.MethodDelete, c.configPath(projectID, "cohorts", slug), nil, nil, nil)
+}
+
+// MaterializeCohort recomputes membership now instead of waiting out the sweep.
+func (c *Client) MaterializeCohort(ctx context.Context, projectID, slug string) (*Cohort, error) {
+	var out Cohort
+	return &out, c.do(ctx, http.MethodPost, c.configPath(projectID, "cohorts", slug)+"/materialize", nil, nil, &out)
+}
+
+// Flags lists a project's feature flags. Unlike the slugged resources this is
+// ALL of them: `key` is the table's real identity, so config-as-code and the
+// panel address the same rows (docs/56 §3.1).
+func (c *Client) Flags(ctx context.Context, projectID string) ([]Flag, error) {
+	var env listEnvelope[Flag]
+	err := c.do(ctx, http.MethodGet, c.configPath(projectID, "flags", ""), nil, nil, &env)
+	return env.Data, err
+}
+
+func (c *Client) Flag(ctx context.Context, projectID, key string) (*Flag, error) {
+	var out Flag
+	return &out, c.do(ctx, http.MethodGet, c.configPath(projectID, "flags", key), nil, nil, &out)
+}
+
+func (c *Client) ApplyFlag(ctx context.Context, projectID string, spec Flag) (*Flag, error) {
+	var out Flag
+	body := map[string]any{
+		"name": spec.Name, "active": spec.Active,
+		"rollout_percentage": spec.RolloutPercentage,
+		"filters":            orEmptyMap(spec.Filters),
+	}
+	if spec.Variants != nil {
+		body["variants"] = spec.Variants
+	}
+	return &out, c.do(ctx, http.MethodPut, c.configPath(projectID, "flags", spec.Key), nil, body, &out)
+}
+
+func (c *Client) DeleteFlag(ctx context.Context, projectID, key string) error {
+	return c.do(ctx, http.MethodDelete, c.configPath(projectID, "flags", key), nil, nil, nil)
+}
+
+func (c *Client) Units(ctx context.Context, projectID string) ([]Unit, error) {
+	var env listEnvelope[Unit]
+	err := c.do(ctx, http.MethodGet, c.configPath(projectID, "units", ""), nil, nil, &env)
+	return env.Data, err
+}
+
+func (c *Client) Unit(ctx context.Context, projectID, slug string) (*Unit, error) {
+	var out Unit
+	return &out, c.do(ctx, http.MethodGet, c.configPath(projectID, "units", slug), nil, nil, &out)
+}
+
+func (c *Client) ApplyUnit(ctx context.Context, projectID string, spec Unit) (*Unit, error) {
+	var out Unit
+	body := map[string]any{
+		"type": spec.Type, "name": spec.Name, "content": orEmptyMap(spec.Content),
+		"targeting":          orEmptyMap(spec.Targeting),
+		"rollout_percentage": spec.RolloutPercentage,
+		"display":            orEmptyMap(spec.Display),
+	}
+	if spec.Status != "" {
+		body["status"] = spec.Status
+	}
+	if spec.StartsAt != "" {
+		body["starts_at"] = spec.StartsAt
+	}
+	if spec.EndsAt != "" {
+		body["ends_at"] = spec.EndsAt
+	}
+	return &out, c.do(ctx, http.MethodPut, c.configPath(projectID, "units", spec.Slug), nil, body, &out)
+}
+
+func (c *Client) DeleteUnit(ctx context.Context, projectID, slug string) error {
+	return c.do(ctx, http.MethodDelete, c.configPath(projectID, "units", slug), nil, nil, nil)
+}
+
+func (c *Client) Campaigns(ctx context.Context, projectID string) ([]Campaign, error) {
+	var env listEnvelope[Campaign]
+	err := c.do(ctx, http.MethodGet, c.configPath(projectID, "campaigns", ""), nil, nil, &env)
+	return env.Data, err
+}
+
+func (c *Client) Campaign(ctx context.Context, projectID, slug string) (*Campaign, error) {
+	var out Campaign
+	return &out, c.do(ctx, http.MethodGet, c.configPath(projectID, "campaigns", slug), nil, nil, &out)
+}
+
+func (c *Client) ApplyCampaign(ctx context.Context, projectID string, spec Campaign) (*Campaign, error) {
+	var out Campaign
+	reentry := spec.Reentry
+	if reentry == "" {
+		reentry = "never"
+	}
+	body := map[string]any{
+		"name": spec.Name, "reentry": reentry,
+		"nodes": orEmptySlice(spec.Nodes), "edges": orEmptySlice(spec.Edges),
+	}
+	for key, value := range map[string]string{
+		"status": spec.Status, "cohort": spec.Cohort, "exit_event": spec.ExitEvent,
+		"from_name": spec.FromName, "reply_to_email": spec.ReplyToEmail,
+	} {
+		if value != "" {
+			body[key] = value
+		}
+	}
+	for key, value := range map[string]*int{
+		"reentry_days": spec.ReentryDays, "frequency_cap": spec.FrequencyCap,
+		"frequency_cap_window_hours": spec.FrequencyCapWindowHours,
+	} {
+		if value != nil {
+			body[key] = *value
+		}
+	}
+	if spec.QuietHours != nil {
+		body["quiet_hours"] = spec.QuietHours
+	}
+	return &out, c.do(ctx, http.MethodPut, c.configPath(projectID, "campaigns", spec.Slug), nil, body, &out)
+}
+
+func (c *Client) DeleteCampaign(ctx context.Context, projectID, slug string) error {
+	return c.do(ctx, http.MethodDelete, c.configPath(projectID, "campaigns", slug), nil, nil, nil)
+}
+
+func (c *Client) Experiments(ctx context.Context, projectID string) ([]Experiment, error) {
+	var env listEnvelope[Experiment]
+	err := c.do(ctx, http.MethodGet, c.configPath(projectID, "experiments", ""), nil, nil, &env)
+	return env.Data, err
+}
+
+func (c *Client) Experiment(ctx context.Context, projectID, key string) (*Experiment, error) {
+	var out Experiment
+	return &out, c.do(ctx, http.MethodGet, c.configPath(projectID, "experiments", key), nil, nil, &out)
+}
+
+func (c *Client) ApplyExperiment(ctx context.Context, projectID string, spec Experiment) (*Experiment, error) {
+	var out Experiment
+	body := map[string]any{
+		"flag": spec.Flag, "name": spec.Name,
+		"control_variant":         spec.ControlVariant,
+		"attribution_window_days": spec.AttributionWindowDays,
+		"primary_metric":          orEmptyMap(spec.PrimaryMetric),
+	}
+	if spec.Status != "" {
+		body["status"] = spec.Status
+	}
+	if spec.Hypothesis != "" {
+		body["hypothesis"] = spec.Hypothesis
+	}
+	if spec.MinimumDetectableEffect != nil {
+		body["minimum_detectable_effect"] = *spec.MinimumDetectableEffect
+	}
+	if spec.SecondaryMetrics != nil {
+		body["secondary_metrics"] = spec.SecondaryMetrics
+	}
+	if spec.GuardrailMetrics != nil {
+		body["guardrail_metrics"] = spec.GuardrailMetrics
+	}
+	return &out, c.do(ctx, http.MethodPut, c.configPath(projectID, "experiments", spec.Key), nil, body, &out)
+}
+
+func (c *Client) DeleteExperiment(ctx context.Context, projectID, key string) error {
+	return c.do(ctx, http.MethodDelete, c.configPath(projectID, "experiments", key), nil, nil, nil)
+}
+
+// orEmptySlice is orEmptyMap for the required collections: a nil slice marshals
+// to JSON null, and the caller deserves "every campaign needs a flow" rather
+// than a server-side type error.
+func orEmptySlice[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}
+
+// orEmptyMap keeps `present` fields present: the panel validates `filters` and
+// `targeting` with `present`, so a nil map has to travel as {} and not be
+// dropped from the JSON body.
+func orEmptyMap(m map[string]any) map[string]any {
+	if m == nil {
+		return map[string]any{}
+	}
+	return m
+}
