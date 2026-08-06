@@ -92,6 +92,27 @@ kd login --host https://panel.example.com
 # or: export KILDEN_HOST=https://panel.example.com
 ```
 
+## Getting started
+
+```bash
+kd init                        # create a project, print the snippet, wait for the first event
+kd init --name "Fjord" --timezone America/Santiago
+kd init --no-wait              # create it and get out of the way
+```
+
+`kd init` is deliberately thin. It creates the project, makes it active, prints
+the browser snippet with your write key already in it, and then waits — up to
+`--wait` (five minutes by default) — until Kilden receives its first real event.
+
+It writes **nothing** into your repository and guesses nothing about your
+stack. Framework detection and file writing are where 90% of the cost and all
+of the maintenance of an `init` live, and they are exactly the part you can
+hand to the coding agent you already have open. Paste the snippet, or paste it
+into your agent.
+
+A wait that times out exits 0. People install tomorrow, and a red exit code
+would be lying about that.
+
 ## Usage
 
 ```bash
