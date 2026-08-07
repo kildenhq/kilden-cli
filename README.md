@@ -66,7 +66,7 @@ Pre-built binaries for every release are on the
 ### With Go
 
 ```bash
-go install github.com/kildenhq/kilden-cli@latest
+go install github.com/kildenhq/kilden-cli/cmd/kd@latest
 ```
 
 The binary is `kd`. Prefer typing `kilden`? Add an alias:

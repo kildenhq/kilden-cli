@@ -9,7 +9,7 @@ before:
 builds:
   - id: kd
     binary: kd
-    main: .
+    main: ./cmd/kd
     env:
       - CGO_ENABLED=0
     goos: [linux, darwin, windows]
