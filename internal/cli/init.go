@@ -130,19 +130,35 @@ func printSnippet(publicKey string) {
 func waitForFirstEvent(ctx context.Context, client *api.Client, project *api.Project, wait time.Duration) error {
 	fmt.Printf("Waiting up to %s for the first event. Ctrl-C to stop; nothing is lost if you do.\n", wait)
 
-	deadline := time.Now().Add(wait)
+	// The deadline belongs to the WAIT, not to the polls. Checking it after a
+	// successful poll — the obvious placement — means a server that is down
+	// for the whole window never ends the wait at all, because every error
+	// takes the `continue` and skips the check. It also means `--wait 1s`
+	// really lasts one poll interval.
+	waitCtx, cancel := context.WithTimeout(ctx, wait)
+	defer cancel()
+
 	ticker := time.NewTicker(initPollInterval)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-waitCtx.Done():
+			// Two different endings arrive through the same channel, and they
+			// are not the same thing to say to somebody.
+			if ctx.Err() == nil {
+				printWaitTimeout(project.Name)
+
+				return nil
+			}
+
 			// An interrupted wait is not a failed install. Say so, and say
 			// what still works.
 			fmt.Println("\nStopped waiting. The project and its key are already set up.")
+
 			return nil
 		case <-ticker.C:
-			current, err := client.Project(ctx, project.ID)
+			current, err := client.Project(waitCtx, project.ID)
 			if err != nil {
 				// A hiccup mid-wait must not end the wait: the install may
 				// be seconds away and this is a poll, not a transaction.
@@ -151,10 +167,7 @@ func waitForFirstEvent(ctx context.Context, client *api.Client, project *api.Pro
 			if current.Activated {
 				fmt.Printf("\nYour first event just landed. %s is live.\n", project.Name)
 				fmt.Println("Watch them arrive with `kd tail`.")
-				return nil
-			}
-			if time.Now().After(deadline) {
-				printWaitTimeout(project.Name)
+
 				return nil
 			}
 		}

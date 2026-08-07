@@ -178,3 +178,52 @@ func TestInitIsRegisteredAndWritesNoFiles(t *testing.T) {
 		t.Error("the help must state that nothing is written")
 	}
 }
+
+func TestWaitGivesUpEvenWhenEveryPollFails(t *testing.T) {
+	// The hole CodeRabbit found in #15: the deadline was only consulted after
+	// a SUCCESSFUL poll, so a server that is down for the whole window left
+	// `kd init` waiting forever. One transient error is a hiccup; an endless
+	// run of them is an outage, and the command still has to come back.
+	client := waitClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
+	done := make(chan error, 1)
+	go func() {
+		done <- waitForFirstEvent(context.Background(), client,
+			&api.Project{ID: "proj-1", Name: "Fjord"}, 200*time.Millisecond)
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("an unreachable server is still a timeout, not an error: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the wait never ended while every poll failed")
+	}
+}
+
+func TestWaitHonoursADeadlineShorterThanThePollInterval(t *testing.T) {
+	// `--wait 1s` must mean one second, not "one poll interval, then think
+	// about it".
+	previous := initPollInterval
+	initPollInterval = 5 * time.Second
+	t.Cleanup(func() { initPollInterval = previous })
+
+	client := waitClient(t, func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]any{"id": "proj-1", "activated": false})
+	})
+	// waitClient shrinks the interval for its own convenience; this test is
+	// about the interval being LONGER than the wait.
+	initPollInterval = 5 * time.Second
+
+	start := time.Now()
+	if err := waitForFirstEvent(context.Background(), client,
+		&api.Project{ID: "proj-1", Name: "Fjord"}, 100*time.Millisecond); err != nil {
+		t.Fatalf("waitForFirstEvent: %v", err)
+	}
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Errorf("a 100ms wait took %s — the poll interval outranked the deadline", elapsed)
+	}
+}
