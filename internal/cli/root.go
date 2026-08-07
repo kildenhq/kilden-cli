@@ -26,6 +26,7 @@ func Execute(version string) {
 
 	root.AddCommand(
 		loginCmd(),
+		initCmd(),
 		logoutCmd(),
 		whoamiCmd(),
 		teamCmd(),

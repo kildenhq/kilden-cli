@@ -30,8 +30,12 @@ type Project struct {
 	TeamID                   int    `json:"team_id"`
 	Timezone                 string `json:"timezone"`
 	IdentityVerificationMode string `json:"identity_verification_mode"`
-	PublicKey                string `json:"public_key"`
-	CreatedAt                string `json:"created_at"`
+	// Activated is true once a REAL event has landed — the panel excludes its
+	// own test button, so this never congratulates somebody for a button we
+	// pressed for them. It is what `kd init` waits on.
+	Activated bool   `json:"activated"`
+	PublicKey string `json:"public_key"`
+	CreatedAt string `json:"created_at"`
 }
 
 // User is the whoami payload.
